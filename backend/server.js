@@ -10,7 +10,11 @@ const port = process.env.PORT || 3000;
 const jwtSecret = process.env.JWT_SECRET;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['https://williamsimass.github.io', 'http://localhost:5000'],
+  methods: ['GET', 'POST', 'DELETE', 'PUT', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+} ));
 app.use(express.json());
 
 // Conexão com MongoDB
