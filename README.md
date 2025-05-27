@@ -87,8 +87,8 @@ O **FinançasPro** é uma aplicação web moderna para controle financeiro pesso
 **William Simas**
 
 - 📧 Email: wsimasdev.10@gmail.com
-- 🔗 GitHub: [github.com/seu-usuario]([https://github.com/seu-usuario](https://github.com/williamsimass))
-- 🔗 LinkedIn: [linkedin.com/in/seu-perfil]([https://linkedin.com/in/seu-perfil](https://www.linkedin.com/in/williamsimas/))
+- 🔗 GitHub: [github.com/williamsimass]([https://github.com/seu-usuario](https://github.com/williamsimass))
+- 🔗 LinkedIn: [linkedin.com/in/williamsimas]([https://linkedin.com/in/seu-perfil](https://www.linkedin.com/in/williamsimas/))
 
 ## 💰 Apoie o Projeto
 
