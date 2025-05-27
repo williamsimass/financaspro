@@ -1,0 +1,319 @@
+/* Estilos específicos para o dashboard */
+
+/* Layout principal */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding: 15px;
+    background-color: var(--bg-color);
+}
+
+/* Navbar */
+.navbar {
+    padding: 8px 15px;
+    background-color: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+.nav-link {
+    color: var(--text-color);
+    font-size: 0.9rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.nav-link:hover, .nav-link.active {
+    background-color: var(--light-gray);
+}
+
+/* Cards */
+.summary-card {
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+.summary-card .card-body {
+    padding: 15px;
+    position: relative;
+}
+
+.summary-card .card-icon {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.summary-card .card-title {
+    font-size: 0.85rem;
+    color: var(--dark-gray);
+    margin-bottom: 6px;
+}
+
+.summary-card .card-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.summary-card .card-trend {
+    font-size: 0.8rem;
+    color: var(--dark-gray);
+}
+
+/* Cores específicas para cada tipo de card */
+.summary-card.balance .card-icon {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+}
+
+.summary-card.income .card-icon {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.summary-card.expense .card-icon {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+/* Gráficos */
+.chart-container {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    padding: 15px;
+    height: 100%;
+    border: 1px solid var(--border-color);
+}
+
+.chart-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+/* Transações */
+.transactions-container {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.transactions-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.transaction-item:last-child {
+    border-bottom: none;
+}
+
+.transaction-item:hover {
+    background-color: var(--light-gray);
+}
+
+.transaction-info {
+    display: flex;
+    align-items: center;
+}
+
+.transaction-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+}
+
+.transaction-icon.income {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.transaction-icon.expense {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+
+.transaction-details h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.transaction-meta {
+    font-size: 0.75rem;
+    color: var(--dark-gray);
+}
+
+.transaction-amount {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.transaction-amount.income {
+    color: var(--success);
+}
+
+.transaction-amount.expense {
+    color: var(--danger);
+}
+
+.delete-btn {
+    opacity: 0;
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    transition: opacity 0.2s;
+    padding: 5px;
+    margin-left: 10px;
+}
+
+.transaction-item:hover .delete-btn {
+    opacity: 1;
+}
+
+/* Formulário de transação */
+.transaction-form-container {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.transaction-form-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-color);
+}
+
+.toggle-container {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    margin-bottom: 15px;
+}
+
+.toggle-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.85rem;
+}
+
+.toggle-btn.expense {
+    color: var(--danger);
+}
+
+.toggle-btn.income {
+    color: var(--success);
+}
+
+.toggle-btn.active.expense {
+    background-color: rgba(239, 68, 68, 0.1);
+    font-weight: 600;
+}
+
+.toggle-btn.active.income {
+    background-color: rgba(16, 185, 129, 0.1);
+    font-weight: 600;
+}
+
+/* FAQ */
+.faq-container {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.faq-section {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.faq-section:last-child {
+    border-bottom: none;
+}
+
+.faq-section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 15px;
+    background-color: var(--light-gray);
+    color: var(--text-color);
+}
+
+.faq-content {
+    padding: 15px;
+    font-size: 0.85rem;
+    color: var(--text-color);
+}
+
+/* Animações */
+.animate-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 10px;
+    }
+    
+    .summary-card .card-value {
+        font-size: 1.3rem;
+    }
+    
+    .chart-container, .transactions-container, .transaction-form-container {
+        margin-bottom: 10px;
+    }
+}
+
+/* Categoria Legend */
+.category-item {
+    font-size: 0.8rem;
+    padding: 4px 0;
+}
