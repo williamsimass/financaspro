@@ -10,6 +10,10 @@ const port = process.env.PORT || 3000;
 const jwtSecret = process.env.JWT_SECRET;
 
 // Middleware
+app.get("/api/test-cors", cors({ origin: 'https://williamsimass.github.io' } ), (req, res) => {
+  console.log("Recebida requisição GET em /api/test-cors");
+  res.json({ message: "Teste CORS OK!" });
+});
 app.use(cors({
   origin: ['https://williamsimass.github.io', 'http://localhost:5000'],
   methods: ['GET', 'POST', 'DELETE', 'PUT', 'OPTIONS'],
