@@ -19,6 +19,12 @@ const jwtSecret = process.env.JWT_SECRET;
 // Use esta configuração mais simples para teste:
 app.use(cors());
 app.use(express.json());
+// Rota de teste CORS
+app.get("/api/test-cors", (req, res) => { // Removi o cors() daqui pois já está global
+  console.log("Recebida requisição GET em /api/test-cors");
+  res.json({ message: "Teste CORS OK!" });
+});
+
 
 // Conexão com MongoDB
 const uri = process.env.MONGODB_URI;
