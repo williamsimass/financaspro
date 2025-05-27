@@ -10,20 +10,14 @@ const port = process.env.PORT || 3000;
 const jwtSecret = process.env.JWT_SECRET;
 
 // Middleware
-// app.use(cors({
-//   origin: ["https://williamsimass.github.io", "http://localhost:5000"],
-//   methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"],
-//   allowedHeaders: ["Content-Type", "Authorization"]
-// } ));
+// Middleware att
+app.use(express.json()); // Coloque esta linha PRIMEIRO
+app.use(cors({ // Coloque a configuração do cors DEPOIS
+  origin: ["https://williamsimass.github.io/financaspro/login.html", "http://localhost:5000"],
+  methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+} ));
 
-// Use esta configuração mais simples para teste:
-app.use(cors());
-app.use(express.json());
-// Rota de teste CORS
-app.get("/api/test-cors", (req, res) => { // Removi o cors() daqui pois já está global
-  console.log("Recebida requisição GET em /api/test-cors");
-  res.json({ message: "Teste CORS OK!" });
-});
 
 
 // Conexão com MongoDB
