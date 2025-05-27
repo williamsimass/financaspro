@@ -4,7 +4,7 @@
  */
 
 // URL base da API (ajuste conforme necessário)
-const API_BASE_URL = "https://financaspro-backend.onrender.com"; 
+const API_BASE_URL = "https://financaspro-back.onrender.com"; 
 // Isso detecta automaticamente o protocolo e hostname atual, apenas fixando a porta 3000
 
 console.log("API configurada para:", API_BASE_URL);
