@@ -9,6 +9,10 @@ const API_BASE_URL = "https://financaspro-back.onrender.com";
 
 console.log("API configurada para:", API_BASE_URL);
 
+// Contador de requisições para evitar logout após múltiplos refreshs
+let requestCounter = 0;
+const MAX_REQUESTS_BEFORE_REFRESH = 10;
+
 /**
  * Função genérica para fazer requisições à API
  * @param {string} endpoint - Endpoint da API (ex: "/api/auth/login")
@@ -44,12 +48,86 @@ async function apiRequest(endpoint, method = "GET", data = null, requireAuth = t
     
     try {
         console.log(`Fazendo requisição ${method} para ${url}`, data ? "com dados" : "sem dados");
+        
+        // Incrementa contador de requisições apenas para verificações de token
+        if (endpoint === "/api/auth/verify") {
+            requestCounter++;
+            console.log(`Contador de requisições: ${requestCounter}/${MAX_REQUESTS_BEFORE_REFRESH}`);
+            
+            // Se atingir o limite, renova o token em vez de verificar
+            if (requestCounter >= MAX_REQUESTS_BEFORE_REFRESH) {
+                console.log("Limite de requisições atingido, renovando token...");
+                requestCounter = 0;
+                
+                // Tenta renovar o token atual em vez de apenas verificar
+                const currentToken = localStorage.getItem("financas-token");
+                if (currentToken) {
+                    try {
+                        // Renova o token sem fazer logout
+                        const renewResponse = await fetch(`${API_BASE_URL}/api/auth/renew`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${currentToken}`
+                            }
+                        });
+                        
+                        if (renewResponse.ok) {
+                            const renewResult = await renewResponse.json();
+                            if (renewResult.token) {
+                                localStorage.setItem("financas-token", renewResult.token);
+                                console.log("Token renovado com sucesso");
+                            }
+                        }
+                    } catch (renewError) {
+                        console.warn("Erro ao renovar token:", renewError);
+                        // Continua com a verificação normal mesmo se falhar
+                    }
+                }
+            }
+        }
+        
         const response = await fetch(url, config);
         
         // Verifica se a resposta é 401 (não autorizado) ou 403 (proibido)
         if (response.status === 401 || response.status === 403) {
-            // Token inválido ou expirado, redireciona para login
-            console.warn("Autenticação falhou (401/403), redirecionando para login");
+            // Token inválido ou expirado, tenta renovar antes de redirecionar
+            console.warn("Autenticação falhou (401/403), tentando renovar token");
+            
+            const currentToken = localStorage.getItem("financas-token");
+            if (currentToken && endpoint !== "/api/auth/renew") {
+                try {
+                    // Tenta renovar o token
+                    const renewResponse = await fetch(`${API_BASE_URL}/api/auth/renew`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${currentToken}`
+                        }
+                    });
+                    
+                    if (renewResponse.ok) {
+                        const renewResult = await renewResponse.json();
+                        if (renewResult.token) {
+                            localStorage.setItem("financas-token", renewResult.token);
+                            console.log("Token renovado após 401/403");
+                            
+                            // Refaz a requisição original com o novo token
+                            config.headers["Authorization"] = `Bearer ${renewResult.token}`;
+                            const retryResponse = await fetch(url, config);
+                            
+                            if (retryResponse.ok) {
+                                const retryResult = await retryResponse.json();
+                                return retryResult;
+                            }
+                        }
+                    }
+                } catch (renewError) {
+                    console.error("Erro ao renovar token após 401/403:", renewError);
+                }
+            }
+            
+            // Se a renovação falhar ou não for possível, faz logout
             localStorage.removeItem("financas-token");
             window.location.href = "login.html";
             return null;
@@ -96,6 +174,8 @@ const AuthAPI = {
      * @returns {Promise} - Promise com o resultado do login (token e dados do usuário)
      */
     login: async (username, password) => {
+        // Reseta o contador ao fazer login
+        requestCounter = 0;
         return apiRequest("/api/auth/login", "POST", { username, password }, false);
     },
     

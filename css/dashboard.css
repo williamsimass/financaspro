@@ -67,7 +67,7 @@
 
 .summary-card .card-title {
     font-size: 0.85rem;
-    color: var(--dark-gray);
+    color: var(--text-muted); /* Corrigido para usar a variável de texto secundário */
     margin-bottom: 6px;
 }
 
@@ -79,7 +79,7 @@
 
 .summary-card .card-trend {
     font-size: 0.8rem;
-    color: var(--dark-gray);
+    color: var(--text-muted); /* Corrigido para usar a variável de texto secundário */
 }
 
 /* Cores específicas para cada tipo de card */
@@ -180,7 +180,7 @@
 
 .transaction-meta {
     font-size: 0.75rem;
-    color: var(--dark-gray);
+    color: var(--text-muted); /* Corrigido para usar a variável de texto secundário */
 }
 
 .transaction-amount {
@@ -297,10 +297,57 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+/* Categoria Legend */
+.category-item {
+    font-size: 0.8rem;
+    padding: 4px 0;
+    color: var(--text-color);
+}
+
+/* Navegação inferior para mobile */
+.mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--card-bg);
+    border-top: 1px solid var(--border-color);
+    z-index: 999;
+    padding: 8px 0;
+}
+
+.mobile-nav-items {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.7rem;
+    padding: 8px 0;
+    transition: color 0.2s;
+}
+
+.mobile-nav-item.active {
+    color: var(--primary);
+}
+
+.mobile-nav-item i {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
     .main-content {
         padding: 10px;
+        padding-bottom: 70px; /* Espaço para a navegação inferior */
     }
     
     .summary-card .card-value {
@@ -310,10 +357,34 @@
     .chart-container, .transactions-container, .transaction-form-container {
         margin-bottom: 10px;
     }
-}
-
-/* Categoria Legend */
-.category-item {
-    font-size: 0.8rem;
-    padding: 4px 0;
+    
+    /* Mostrar navegação inferior em telas pequenas */
+    .mobile-nav {
+        display: block;
+    }
+    
+    /* Ajustar tamanho dos elementos para toque */
+    .transaction-item {
+        padding: 12px 10px;
+    }
+    
+    .delete-btn {
+        opacity: 0.7; /* Sempre visível em mobile para facilitar */
+        padding: 8px;
+    }
+    
+    /* Melhorar visualização de gráficos */
+    .chart-container {
+        overflow-x: auto;
+    }
+    
+    /* Ajustar formulários para melhor usabilidade */
+    .form-floating > .form-control {
+        height: calc(3.5rem + 2px);
+        padding: 1rem 0.75rem;
+    }
+    
+    .form-floating > label {
+        padding: 1rem 0.75rem;
+    }
 }

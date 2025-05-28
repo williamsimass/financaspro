@@ -10,15 +10,8 @@ const port = process.env.PORT || 3000;
 const jwtSecret = process.env.JWT_SECRET;
 
 // Middleware
-// Middleware att
-app.use(express.json()); // Coloque esta linha PRIMEIRO
-app.use(cors({ // Coloque a configuração do cors DEPOIS
-  origin: ["https://williamsimass.github.io/financaspro/login.html", "http://localhost:5000"],
-  methods: ["GET", "POST", "DELETE", "PUT", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-} ));
-
-
+app.use(cors());
+app.use(express.json());
 
 // Conexão com MongoDB
 const uri = process.env.MONGODB_URI;
@@ -289,4 +282,3 @@ connectDB().then(() => {
 }).catch(err => {
     console.error("Erro fatal ao iniciar o servidor:", err);
 });
-

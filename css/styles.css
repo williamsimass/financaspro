@@ -27,6 +27,7 @@
   /* Variáveis para tema */
   --bg-color: var(--light);
   --text-color: var(--dark);
+  --text-muted: var(--dark-gray);
   --card-bg: #ffffff;
   --border-color: var(--medium-gray);
 }
@@ -35,6 +36,7 @@
 [data-theme="dark"] {
   --bg-color: #121212;
   --text-color: #E5E7EB;
+  --text-muted: #9CA3AF; /* Cor mais clara para texto secundário no modo escuro */
   --card-bg: #1F2937;
   --border-color: #374151;
   --light-gray: #2D3748;
@@ -117,6 +119,11 @@ body {
   background-color: var(--primary) !important;
 }
 
+/* Correção para texto muted no modo escuro */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
 /* Animações */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -171,11 +178,11 @@ body {
 }
 
 .form-floating label {
-  color: var(--dark-gray);
+  color: var(--text-muted);
 }
 
 .form-text {
-  color: var(--dark-gray);
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -230,6 +237,182 @@ body {
   font-size: 18px;
 }
 
+/* Dropdown ajustes para modo escuro */
+.dropdown-menu {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+.dropdown-item {
+  color: var(--text-color);
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+  background-color: var(--light-gray);
+  color: var(--text-color);
+}
+
+.dropdown-divider {
+  border-top-color: var(--border-color);
+}
+
+/* Menu flutuante para mobile */
+.floating-menu {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: none; /* Inicialmente oculto, será mostrado apenas em telas pequenas */
+}
+
+.floating-menu-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.floating-menu-btn:hover, .floating-menu-btn:focus {
+  background-color: var(--primary-dark);
+}
+
+.floating-menu-btn i {
+  font-size: 24px;
+  transition: transform 0.3s ease;
+}
+
+.floating-menu.active .floating-menu-btn i {
+  transform: rotate(45deg);
+}
+
+.floating-menu-options {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.floating-menu.active .floating-menu-options {
+  display: flex;
+}
+
+.floating-menu-item {
+  display: flex;
+  align-items: center;
+  background-color: var(--card-bg);
+  border-radius: 20px;
+  padding: 8px 16px;
+  box-shadow: var(--shadow-md);
+  color: var(--text-color);
+  text-decoration: none;
+  font-size: 14px;
+  transition: transform 0.2s ease;
+  border: 1px solid var(--border-color);
+}
+
+.floating-menu-item:hover {
+  transform: translateX(-5px);
+}
+
+.floating-menu-item i {
+  margin-right: 8px;
+}
+
+/* Resumo mensal para mobile */
+.monthly-summary {
+  background-color: var(--card-bg);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid var(--border-color);
+  display: none; /* Inicialmente oculto, será mostrado via JS */
+}
+
+.monthly-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.monthly-summary-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.month-selector {
+  display: flex;
+  align-items: center;
+}
+
+.month-selector button {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 5px;
+}
+
+.month-selector span {
+  margin: 0 10px;
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.monthly-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.monthly-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.monthly-stat:last-child {
+  border-bottom: none;
+}
+
+.monthly-stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.monthly-stat-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.monthly-stat-value.positive {
+  color: var(--success);
+}
+
+.monthly-stat-value.negative {
+  color: var(--danger);
+}
+
+.monthly-chart-container {
+  height: 120px;
+  margin-top: 10px;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
   .card {
@@ -240,4 +423,51 @@ body {
     padding-left: 12px;
     padding-right: 12px;
   }
+  
+  /* Mostrar menu flutuante apenas em telas pequenas */
+  .floating-menu {
+    display: block;
+  }
+  
+  /* Ajustes para navegação em telas pequenas */
+  .navbar {
+    padding: 8px;
+  }
+  
+  .navbar-brand {
+    font-size: 1.1rem;
+  }
+  
+  /* Melhorar espaçamento em telas pequenas */
+  .main-content {
+    padding: 10px;
+  }
+  
+  /* Ajustar tamanho dos cards para melhor visualização */
+  .summary-card .card-value {
+    font-size: 1.3rem;
+  }
+  
+  /* Garantir que elementos interativos sejam grandes o suficiente para toque */
+  .nav-link, .btn, .form-control {
+    padding: 10px;
+  }
+  
+  /* Melhorar visualização de formulários */
+  .form-floating > label {
+    padding: 0.75rem;
+  }
+  
+  /* Ajustar tamanho dos gráficos */
+  .chart-container {
+    height: auto;
+  }
+}
+
+/* Suporte a gestos de deslize para navegação */
+.swipe-area {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
 }

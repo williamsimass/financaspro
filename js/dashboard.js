@@ -1,346 +1,615 @@
 /**
- * Dashboard.js - Funções para gerenciamento do dashboard
- * Gerencia carregamento de transações, gráficos e interações do dashboard
+ * Dashboard.js - Funcionalidades específicas para o dashboard
+ * Gerencia carregamento de dados, gráficos e interações do dashboard
  */
 
-// Inicializa o dashboard quando o documento estiver pronto
 document.addEventListener("DOMContentLoaded", function() {
-    // Verifica se estamos na página do dashboard
-    if (!document.getElementById('dashboard-section')) return;
+    // Adiciona botões rápidos para adicionar transações diretamente no dashboard
+    addQuickActionButtons();
     
-    // Configura os elementos do dashboard
-    setupDashboardElements();
+    // Carrega dados do dashboard
+    loadDashboardData();
     
-    // Verifica autenticação e carrega dados
-    const token = localStorage.getItem("financas-token");
-    if (token) {
-        loadDashboardData();
-    } else {
-        // Redireciona para login se não houver token
-        window.location.href = "login.html";
-    }
-});
-
-// Configura os elementos do dashboard
-function setupDashboardElements() {
+    // Configura navegação entre seções
+    setupSectionNavigation();
+    
     // Configura o formulário de transação
     setupTransactionForm();
     
-    // Configura os botões de tipo de transação
-    setupTransactionTypeToggle();
+    // Configura o modal de transação rápida
+    setupQuickTransactionModal();
+});
+
+// Adiciona botões rápidos para adicionar transações
+function addQuickActionButtons() {
+    console.log("Adicionando botões rápidos ao dashboard");
     
-    // Configura a navegação entre seções
-    setupNavigation();
+    // Adiciona botões rápidos no topo do dashboard
+    const dashboardHeader = document.querySelector("#dashboard-section .row:first-child .col-12");
+    if (dashboardHeader) {
+        // Verifica se os botões já existem para evitar duplicação
+        if (!document.getElementById("quick-add-expense")) {
+            const quickButtonsHTML = `
+                <div class="quick-action-buttons mt-2">
+                    <button id="quick-add-expense" class="btn btn-outline-danger btn-sm me-2">
+                        <i class="fas fa-arrow-down me-1"></i> Nova Despesa
+                    </button>
+                    <button id="quick-add-income" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-arrow-up me-1"></i> Nova Receita
+                    </button>
+                </div>
+            `;
+            
+            dashboardHeader.insertAdjacentHTML("beforeend", quickButtonsHTML);
+            
+            // Configura eventos de clique para abrir o modal
+            const expenseBtn = document.getElementById("quick-add-expense");
+            const incomeBtn = document.getElementById("quick-add-income");
+            
+            if (expenseBtn) {
+                expenseBtn.addEventListener("click", function() {
+                    openQuickTransactionModal("expense");
+                });
+            }
+            
+            if (incomeBtn) {
+                incomeBtn.addEventListener("click", function() {
+                    openQuickTransactionModal("income");
+                });
+            }
+        }
+    }
+    
+    // Adiciona o modal de transação rápida ao DOM se ainda não existir
+    if (!document.getElementById("quick-transaction-modal")) {
+        const modalHTML = `
+            <div class="modal fade" id="quick-transaction-modal" tabindex="-1" aria-labelledby="quickTransactionModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="quickTransactionModalLabel">Nova Transação</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="quick-transaction-form">
+                                <div class="toggle-container mb-3">
+                                    <div class="toggle-btn expense" data-type="expense">Despesa</div>
+                                    <div class="toggle-btn income" data-type="income">Receita</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="quick-transaction-description" class="form-label">Descrição</label>
+                                    <input type="text" class="form-control" id="quick-transaction-description" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="quick-transaction-amount" class="form-label">Valor (R$)</label>
+                                    <input type="text" class="form-control" id="quick-transaction-amount" inputmode="decimal" placeholder="Ex: 10,50" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="quick-transaction-category" class="form-label">Categoria</label>
+                                    <select class="form-select" id="quick-transaction-category" required>
+                                        <option value="" disabled selected>Selecione uma categoria</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="quick-transaction-date" class="form-label">Data</label>
+                                    <input type="date" class="form-control" id="quick-transaction-date" required>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" id="save-quick-transaction">Salvar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML("beforeend", modalHTML);
+    }
 }
 
-// Carrega os dados do dashboard
+// Configura o modal de transação rápida
+function setupQuickTransactionModal() {
+    // Configura alternância entre despesa/receita no modal
+    const toggleBtns = document.querySelectorAll("#quick-transaction-modal .toggle-btn");
+    toggleBtns.forEach(btn => {
+        btn.addEventListener("click", function() {
+            // Remove classe active de todos os botões
+            toggleBtns.forEach(b => b.classList.remove("active"));
+            
+            // Adiciona classe active ao botão clicado
+            this.classList.add("active");
+            
+            // Atualiza categorias com base no tipo selecionado
+            const type = this.getAttribute("data-type");
+            updateQuickTransactionCategories(type);
+        });
+    });
+    
+    // Configura data padrão como hoje
+    const dateInput = document.getElementById("quick-transaction-date");
+    if (dateInput) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = (today.getMonth() + 1).toString().padStart(2, "0");
+        const day = today.getDate().toString().padStart(2, "0");
+        dateInput.value = `${year}-${month}-${day}`;
+    }
+    
+    // Configura botão de salvar
+    const saveBtn = document.getElementById("save-quick-transaction");
+    if (saveBtn) {
+        saveBtn.addEventListener("click", async function() {
+            // Valida o formulário
+            const form = document.getElementById("quick-transaction-form");
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            // Obtém tipo de transação (despesa/receita)
+            const activeToggle = document.querySelector("#quick-transaction-modal .toggle-btn.active");
+            const type = activeToggle ? activeToggle.getAttribute("data-type") : "expense";
+            
+            // Obtém valores do formulário
+            const description = document.getElementById("quick-transaction-description").value;
+            const amountInput = document.getElementById("quick-transaction-amount").value;
+            const category = document.getElementById("quick-transaction-category").value;
+            const date = document.getElementById("quick-transaction-date").value;
+            
+            // Converte e valida o valor
+            let amount = 0;
+            try {
+                // Substitui vírgula por ponto e converte para float
+                amount = parseFloat(amountInput.replace(",", "."));
+                
+                // Verifica se é um número válido e positivo
+                if (isNaN(amount) || amount <= 0) {
+                    alert("O valor da transação deve ser um número positivo.");
+                    return;
+                }
+            } catch (e) {
+                alert("Erro ao processar o valor da transação. Verifique o formato.");
+                return;
+            }
+            
+            // Cria objeto de transação com valor absoluto
+            const transaction = {
+                type,
+                description,
+                amount: Math.abs(amount), // Garante que o valor enviado é sempre positivo
+                category,
+                date
+            };
+            
+            try {
+                console.log("Enviando transação:", transaction);
+                
+                // Envia transação para a API
+                await TransactionsAPI.add(transaction);
+                
+                // Fecha o modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById("quick-transaction-modal"));
+                modal.hide();
+                
+                // Recarrega dados do dashboard
+                loadDashboardData();
+                
+                // Exibe mensagem de sucesso
+                alert("Transação adicionada com sucesso!");
+            } catch (error) {
+                console.error("Erro ao adicionar transação:", error);
+                alert("Erro ao adicionar transação: " + (error.message || "Tente novamente."));
+            }
+        });
+    }
+}
+
+// Abre o modal de transação rápida
+function openQuickTransactionModal(type) {
+    // Obtém o modal
+    const modalElement = document.getElementById("quick-transaction-modal");
+    if (!modalElement) return;
+    
+    // Inicializa o modal Bootstrap se ainda não estiver inicializado
+    let modal = bootstrap.Modal.getInstance(modalElement);
+    if (!modal) {
+        modal = new bootstrap.Modal(modalElement);
+    }
+    
+    // Configura o tipo de transação
+    const expenseBtn = modalElement.querySelector(".toggle-btn.expense");
+    const incomeBtn = modalElement.querySelector(".toggle-btn.income");
+    
+    if (type === "expense") {
+        expenseBtn.classList.add("active");
+        incomeBtn.classList.remove("active");
+    } else {
+        incomeBtn.classList.add("active");
+        expenseBtn.classList.remove("active");
+    }
+    
+    // Atualiza categorias para o tipo selecionado
+    updateQuickTransactionCategories(type);
+    
+    // Configura data padrão como hoje
+    const dateInput = document.getElementById("quick-transaction-date");
+    if (dateInput) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = (today.getMonth() + 1).toString().padStart(2, "0");
+        const day = today.getDate().toString().padStart(2, "0");
+        dateInput.value = `${year}-${month}-${day}`;
+    }
+    
+    // Limpa outros campos
+    document.getElementById("quick-transaction-description").value = "";
+    document.getElementById("quick-transaction-amount").value = "";
+    
+    // Abre o modal
+    modal.show();
+}
+
+// Atualiza categorias para o modal de transação rápida
+function updateQuickTransactionCategories(type) {
+    const categorySelect = document.getElementById("quick-transaction-category");
+    if (!categorySelect) return;
+    
+    // Limpa as opções atuais
+    categorySelect.innerHTML = 
+        `<option value="" disabled selected>Selecione uma categoria</option>`;
+    
+    // Adiciona categorias com base no tipo
+    if (type === "income") {
+        const incomeCategories = [
+            "Salário", "Freelance", "Investimentos", "Vendas", "Outros"
+        ];
+        
+        incomeCategories.forEach(category => {
+            const option = document.createElement("option");
+            option.value = category.toLowerCase();
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    } else {
+        const expenseCategories = [
+            "Alimentação", "Moradia", "Transporte", "Saúde", "Educação", 
+            "Lazer", "Vestuário", "Contas", "Outros"
+        ];
+        
+        expenseCategories.forEach(category => {
+            const option = document.createElement("option");
+            option.value = category.toLowerCase();
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    }
+}
+
+// Carrega dados do dashboard
 async function loadDashboardData() {
     try {
-        // Mostra indicador de carregamento
-        showLoading(true);
-        
-        // Carrega as transações
+        // Carrega transações
         await loadTransactions();
         
-        // Atualiza o resumo financeiro
+        // Atualiza resumo financeiro
         updateFinancialSummary();
         
-        // Renderiza os gráficos
-        renderCharts();
-        
-        // Esconde indicador de carregamento
-        showLoading(false);
+        // Inicializa gráficos
+        initCharts();
     } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
-        showError("Não foi possível carregar seus dados financeiros. Tente novamente mais tarde.");
-        
-        // Mostra mensagem de erro no lugar das transações
-        const transactionsListElement = document.getElementById('transactions-list');
-        if (transactionsListElement) {
-            transactionsListElement.innerHTML = `
-                <div class="alert alert-danger m-3">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Erro ao carregar transações: ${error.message || 'Verifique sua conexão e tente novamente.'}
-                </div>
-                <p class="text-center">
-                    <button class="btn btn-outline-primary btn-sm" onclick="loadDashboardData()">
-                        <i class="fas fa-sync-alt me-1"></i> Tentar novamente
-                    </button>
-                </p>
-            `;
-        }
-        
-        const allTransactionsListElement = document.getElementById('all-transactions-list');
-        if (allTransactionsListElement) {
-            allTransactionsListElement.innerHTML = `
-                <div class="alert alert-danger m-3">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    Erro ao carregar transações: ${error.message || 'Verifique sua conexão e tente novamente.'}
-                </div>
-                <p class="text-center">
-                    <button class="btn btn-outline-primary btn-sm" onclick="loadDashboardData()">
-                        <i class="fas fa-sync-alt me-1"></i> Tentar novamente
-                    </button>
-                </p>
-            `;
-        }
-        
-        showLoading(false);
     }
 }
 
-// Carrega as transações do usuário
+// Carrega transações do usuário
 async function loadTransactions() {
     try {
-        console.log("Iniciando carregamento de transações...");
         const transactions = await TransactionsAPI.getAll();
-        console.log("Resposta da API de transações:", transactions);
+        console.log("Transações carregadas:", transactions);
         
-        if (!transactions) {
-            throw new Error("Resposta vazia da API");
+        if (transactions && transactions.length > 0) {
+            // Armazena transações para uso em outros componentes
+            window.transactions = transactions;
+            
+            // Atualiza lista de transações recentes
+            updateRecentTransactions(transactions);
+            
+            // Atualiza lista completa de transações
+            updateAllTransactions(transactions);
+            
+            // Atualiza dados para gráficos
+            updateChartData(transactions);
+        } else {
+            // Exibe mensagem de nenhuma transação
+            document.getElementById("transactions-list").innerHTML = `
+                <p class="text-center py-3 text-muted">Nenhuma transação encontrada.</p>
+            `;
+            
+            document.getElementById("all-transactions-list").innerHTML = `
+                <p class="text-center py-3 text-muted">Nenhuma transação encontrada.</p>
+            `;
         }
-        
-        if (!Array.isArray(transactions)) {
-            console.error("Resposta não é um array:", transactions);
-            throw new Error("Formato de resposta inválido");
-        }
-        
-        // Armazena as transações em uma variável global
-        window.userTransactions = transactions;
-        
-        // Renderiza a lista de transações
-        renderTransactionsList(transactions);
-        
-        // Renderiza a lista completa de transações (na aba Transações)
-        renderAllTransactionsList(transactions);
-        
-        return transactions;
     } catch (error) {
         console.error("Erro ao carregar transações:", error);
-        throw error;
+        
+        // Exibe mensagem de erro
+        document.getElementById("transactions-list").innerHTML = `
+            <p class="text-center py-3 text-danger">Erro ao carregar transações. Tente novamente.</p>
+        `;
+        
+        document.getElementById("all-transactions-list").innerHTML = `
+            <p class="text-center py-3 text-danger">Erro ao carregar transações. Tente novamente.</p>
+        `;
     }
 }
 
-// Renderiza a lista de transações recentes (no Dashboard)
-function renderTransactionsList(transactions) {
-    const transactionsListElement = document.getElementById('transactions-list');
-    if (!transactionsListElement) return;
-    
-    // Limpa a lista atual
-    transactionsListElement.innerHTML = '';
-    
-    // Ordena as transações por data (mais recentes primeiro)
-    const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+// Atualiza lista de transações recentes
+function updateRecentTransactions(transactions) {
+    const transactionsList = document.getElementById("transactions-list");
     
     // Limita a 5 transações mais recentes
-    const recentTransactions = sortedTransactions.slice(0, 5);
+    const recentTransactions = transactions
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5);
     
-    // Se não houver transações, mostra mensagem
     if (recentTransactions.length === 0) {
-        transactionsListElement.innerHTML = '<p class="text-center py-4 text-muted">Nenhuma transação registrada.</p>';
+        transactionsList.innerHTML = `
+            <p class="text-center py-3 text-muted">Nenhuma transação encontrada.</p>
+        `;
         return;
     }
     
-    // Adiciona cada transação à lista
-    recentTransactions.forEach(transaction => {
-        const transactionElement = document.createElement('div');
-        transactionElement.className = 'transaction-item position-relative animate-in';
-        transactionElement.dataset.id = transaction._id;
-        
-        transactionElement.innerHTML = `
-            <div class="transaction-info">
-                <div class="transaction-icon ${transaction.type}">
-                    <i class="fas ${transaction.type === 'income' ? 'fa-plus' : 'fa-minus'}"></i>
-                </div>
-                <div class="transaction-details">
-                    <h4>${transaction.description}</h4>
-                    <div class="transaction-meta">
-                        ${transaction.category} • ${formatDate(transaction.date)}
-                    </div>
-                </div>
-            </div>
-            <div class="transaction-amount ${transaction.type}">
-                ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
-            </div>
-        `;
-        
-        transactionsListElement.appendChild(transactionElement);
-    });
-}
-
-// Renderiza a lista completa de transações (na aba Transações)
-function renderAllTransactionsList(transactions) {
-    const allTransactionsListElement = document.getElementById('all-transactions-list');
-    if (!allTransactionsListElement) return;
+    // Cria HTML para cada transação
+    const transactionsHTML = recentTransactions.map(transaction => {
+        return createTransactionHTML(transaction);
+    }).join("");
     
-    // Limpa a lista atual
-    allTransactionsListElement.innerHTML = '';
+    // Atualiza o DOM
+    transactionsList.innerHTML = transactionsHTML;
     
-    // Ordena as transações por data (mais recentes primeiro)
-    const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    // Se não houver transações, mostra mensagem
-    if (sortedTransactions.length === 0) {
-        allTransactionsListElement.innerHTML = '<p class="text-center py-4 text-muted">Nenhuma transação registrada.</p>';
-        return;
-    }
-    
-    // Adiciona cada transação à lista
-    sortedTransactions.forEach(transaction => {
-        const transactionElement = document.createElement('div');
-        transactionElement.className = 'transaction-item position-relative animate-in';
-        transactionElement.dataset.id = transaction._id;
-        
-        transactionElement.innerHTML = `
-            <div class="transaction-info">
-                <div class="transaction-icon ${transaction.type}">
-                    <i class="fas ${transaction.type === 'income' ? 'fa-plus' : 'fa-minus'}"></i>
-                </div>
-                <div class="transaction-details">
-                    <h4>${transaction.description}</h4>
-                    <div class="transaction-meta">
-                        ${transaction.category} • ${formatDate(transaction.date)}
-                    </div>
-                </div>
-            </div>
-            <div class="transaction-amount ${transaction.type}">
-                ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
-            </div>
-            <button class="delete-btn" data-id="${transaction._id}">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-        `;
-        
-        allTransactionsListElement.appendChild(transactionElement);
-    });
-    
-    // Adiciona event listeners aos botões de deletar
+    // Configura botões de exclusão
     setupDeleteButtons();
 }
 
-// Configura os botões de deletar transação
+// Atualiza lista completa de transações
+function updateAllTransactions(transactions) {
+    const allTransactionsList = document.getElementById("all-transactions-list");
+    
+    // Ordena por data (mais recente primeiro)
+    const sortedTransactions = transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    if (sortedTransactions.length === 0) {
+        allTransactionsList.innerHTML = `
+            <p class="text-center py-3 text-muted">Nenhuma transação encontrada.</p>
+        `;
+        return;
+    }
+    
+    // Cria HTML para cada transação
+    const transactionsHTML = sortedTransactions.map(transaction => {
+        return createTransactionHTML(transaction);
+    }).join("");
+    
+    // Atualiza o DOM
+    allTransactionsList.innerHTML = transactionsHTML;
+    
+    // Configura botões de exclusão
+    setupDeleteButtons();
+}
+
+// Cria HTML para uma transação
+function createTransactionHTML(transaction) {
+    const date = new Date(transaction.date);
+    const formattedDate = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}/${date.getFullYear()}`;
+    
+    const isIncome = transaction.type === "income";
+    const iconClass = isIncome ? "arrow-up" : "arrow-down";
+    const amountClass = isIncome ? "income" : "expense";
+    const sign = isIncome ? "+" : "-";
+    
+    return `
+        <div class="transaction-item" data-id="${transaction._id}">
+            <div class="transaction-info">
+                <div class="transaction-icon ${amountClass}">
+                    <i class="fas fa-${iconClass}"></i>
+                </div>
+                <div class="transaction-details">
+                    <h4>${transaction.description}</h4>
+                    <div class="transaction-meta">
+                        ${formattedDate} • ${transaction.category}
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="transaction-amount ${amountClass}">
+                    ${sign} R$ ${parseFloat(transaction.amount).toFixed(2).replace(".", ",")}
+                </div>
+                <button class="delete-btn" data-id="${transaction._id}">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Configura botões de exclusão de transações
 function setupDeleteButtons() {
-    const deleteButtons = document.querySelectorAll('.delete-btn');
+    const deleteButtons = document.querySelectorAll(".delete-btn");
+    
     deleteButtons.forEach(button => {
-        button.addEventListener('click', async function() {
-            const id = this.dataset.id;
-            if (confirm('Tem certeza que deseja excluir esta transação?')) {
+        button.addEventListener("click", async function() {
+            const id = this.getAttribute("data-id");
+            
+            if (confirm("Tem certeza que deseja excluir esta transação?")) {
                 try {
-                    await deleteTransaction(id);
+                    await TransactionsAPI.remove(id);
+                    
+                    // Remove o elemento do DOM
+                    const transactionItem = this.closest(".transaction-item");
+                    transactionItem.classList.add("fade-out");
+                    
+                    setTimeout(() => {
+                        transactionItem.remove();
+                        
+                        // Recarrega dados do dashboard
+                        loadDashboardData();
+                    }, 300);
                 } catch (error) {
                     console.error("Erro ao excluir transação:", error);
-                    showError("Não foi possível excluir a transação. Tente novamente.");
+                    alert("Erro ao excluir transação. Tente novamente.");
                 }
             }
         });
     });
 }
 
-// Exclui uma transação
-async function deleteTransaction(id) {
-    try {
-        const result = await TransactionsAPI.remove(id);
-        if (result && result.success) {
-            // Remove a transação da lista
-            const transactions = window.userTransactions.filter(t => t._id !== id);
-            window.userTransactions = transactions;
-            
-            // Atualiza a interface
-            renderTransactionsList(transactions);
-            renderAllTransactionsList(transactions);
-            updateFinancialSummary();
-            renderCharts();
-            
-            // Mostra mensagem de sucesso
-            showSuccess("Transação excluída com sucesso!");
-        } else {
-            throw new Error("Erro ao excluir transação");
-        }
-    } catch (error) {
-        console.error("Erro ao excluir transação:", error);
-        throw error;
-    }
-}
-
-// Atualiza o resumo financeiro
+// Atualiza resumo financeiro
 function updateFinancialSummary() {
-    const transactions = window.userTransactions || [];
+    const transactions = window.transactions || [];
     
-    // Calcula totais
-    const income = transactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    // Calcula saldo total, receitas e despesas
+    let totalIncome = 0;
+    let totalExpense = 0;
     
-    const expenses = transactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    transactions.forEach(transaction => {
+        if (transaction.type === "income") {
+            totalIncome += parseFloat(transaction.amount);
+        } else {
+            totalExpense += parseFloat(transaction.amount);
+        }
+    });
     
-    const balance = income - expenses;
+    const balance = totalIncome - totalExpense;
     
-    // Atualiza os elementos na interface
-    const balanceElement = document.getElementById('balance-amount');
-    const incomeElement = document.getElementById('income-amount');
-    const expenseElement = document.getElementById('expense-amount');
+    // Atualiza valores no DOM
+    document.getElementById("balance-amount").textContent = `R$ ${balance.toFixed(2).replace(".", ",")}`;
+    document.getElementById("income-amount").textContent = `R$ ${totalIncome.toFixed(2).replace(".", ",")}`;
+    document.getElementById("expense-amount").textContent = `R$ ${totalExpense.toFixed(2).replace(".", ",")}`;
     
-    if (balanceElement) balanceElement.textContent = formatCurrency(balance);
-    if (incomeElement) incomeElement.textContent = formatCurrency(income);
-    if (expenseElement) expenseElement.textContent = formatCurrency(expenses);
+    // Calcula tendências (exemplo simples)
+    const incomeTrend = totalIncome > 0 ? "+10% este mês" : "0%";
+    const expenseTrend = totalExpense > 0 ? "+5% este mês" : "0%";
+    const balanceTrend = balance > 0 ? "+15% este mês" : "-5% este mês";
+    
+    document.getElementById("income-trend").textContent = incomeTrend;
+    document.getElementById("expense-trend").textContent = expenseTrend;
+    document.getElementById("balance-trend").textContent = balanceTrend;
 }
 
-// Renderiza os gráficos
-function renderCharts() {
-    renderExpenseTrendChart();
-    renderExpenseCategoryChart();
+// Atualiza dados para gráficos
+function updateChartData(transactions) {
+    // Dados para gráfico de tendência de despesas
+    const expenseTrendData = calculateExpenseTrend(transactions);
+    
+    // Dados para gráfico de categorias de despesas
+    const expenseCategoryData = calculateExpenseCategories(transactions);
+    
+    // Armazena dados para uso nos gráficos
+    window.chartData = {
+        expenseTrend: expenseTrendData,
+        expenseCategory: expenseCategoryData
+    };
 }
 
-// Renderiza o gráfico de tendência de despesas
-function renderExpenseTrendChart() {
-    const chartCanvas = document.getElementById('expense-trend-chart');
-    if (!chartCanvas) return;
+// Calcula dados para gráfico de tendência de despesas
+function calculateExpenseTrend(transactions) {
+    // Obtém os últimos 6 meses
+    const today = new Date();
+    const months = [];
+    const monthlyExpenses = [];
     
-    const transactions = window.userTransactions || [];
-    const expenses = transactions.filter(t => t.type === 'expense');
-    
-    // Se não houver despesas, limpa o canvas
-    if (expenses.length === 0) {
-        const ctx = chartCanvas.getContext('2d');
-        ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-        return;
-    }
-    
-    // Agrupa despesas por dia
-    const expensesByDay = {};
-    expenses
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .forEach(t => {
-            const day = formatDate(t.date);
-            expensesByDay[day] = (expensesByDay[day] || 0) + parseFloat(t.amount);
+    for (let i = 5; i >= 0; i--) {
+        const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthName = month.toLocaleString("pt-BR", { month: "short" });
+        months.push(monthName);
+        
+        // Filtra transações do mês
+        const monthTransactions = transactions.filter(transaction => {
+            const transactionDate = new Date(transaction.date);
+            return transactionDate.getMonth() === month.getMonth() && 
+                   transactionDate.getFullYear() === month.getFullYear() &&
+                   transaction.type === "expense";
         });
-    
-    // Prepara dados para o gráfico
-    const labels = Object.keys(expensesByDay);
-    const data = Object.values(expensesByDay);
-    
-    // Verifica se já existe um gráfico e o destrói
-    if (window.expenseTrendChart) {
-        window.expenseTrendChart.destroy();
+        
+        // Soma despesas do mês
+        const monthTotal = monthTransactions.reduce((total, transaction) => {
+            return total + parseFloat(transaction.amount);
+        }, 0);
+        
+        monthlyExpenses.push(monthTotal);
     }
     
-    // Cria o novo gráfico
-    const ctx = chartCanvas.getContext('2d');
-    window.expenseTrendChart = new Chart(ctx, {
-        type: 'line',
+    return {
+        labels: months,
+        values: monthlyExpenses
+    };
+}
+
+// Calcula dados para gráfico de categorias de despesas
+function calculateExpenseCategories(transactions) {
+    // Filtra apenas despesas
+    const expenses = transactions.filter(transaction => transaction.type === "expense");
+    
+    // Agrupa por categoria
+    const categories = {};
+    
+    expenses.forEach(expense => {
+        const category = expense.category || "Outros";
+        
+        if (!categories[category]) {
+            categories[category] = 0;
+        }
+        
+        categories[category] += parseFloat(expense.amount);
+    });
+    
+    // Converte para arrays para o gráfico
+    const categoryNames = Object.keys(categories);
+    const categoryValues = Object.values(categories);
+    
+    return {
+        labels: categoryNames,
+        values: categoryValues
+    };
+}
+
+// Inicializa gráficos
+function initCharts() {
+    // Inicializa gráfico de tendência de despesas
+    initExpenseTrendChart();
+    
+    // Inicializa gráfico de categorias de despesas
+    initExpenseCategoryChart();
+}
+
+// Inicializa gráfico de tendência de despesas
+function initExpenseTrendChart() {
+    const ctx = document.getElementById("expense-trend-chart");
+    if (!ctx) return;
+    
+    const ctxContext = ctx.getContext("2d");
+    
+    // Obtém dados do gráfico
+    const chartData = window.chartData?.expenseTrend || {
+        labels: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"],
+        values: [0, 0, 0, 0, 0, 0]
+    };
+    
+    // Configuração do gráfico
+    const config = {
+        type: "line",
         data: {
-            labels: labels,
+            labels: chartData.labels,
             datasets: [{
-                label: 'Despesas',
-                data: data,
-                borderColor: '#EF4444',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                label: "Despesas",
+                data: chartData.values,
+                backgroundColor: "rgba(239, 68, 68, 0.1)",
+                borderColor: "rgba(239, 68, 68, 1)",
+                borderWidth: 2,
                 tension: 0.4,
-                fill: true,
-                pointRadius: 4,
-                pointHoverRadius: 6
+                fill: true
             }]
         },
         options: {
@@ -349,13 +618,6 @@ function renderExpenseTrendChart() {
             plugins: {
                 legend: {
                     display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return formatCurrency(context.raw);
-                        }
-                    }
                 }
             },
             scales: {
@@ -363,68 +625,51 @@ function renderExpenseTrendChart() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatCurrency(value);
+                            return "R$ " + value;
                         }
                     }
                 }
             }
         }
-    });
+    };
+    
+    // Cria o gráfico
+    new Chart(ctxContext, config);
 }
 
-// Renderiza o gráfico de categorias de despesas
-function renderExpenseCategoryChart() {
-    const chartCanvas = document.getElementById('expense-category-chart');
-    if (!chartCanvas) return;
+// Inicializa gráfico de categorias de despesas
+function initExpenseCategoryChart() {
+    const ctx = document.getElementById("expense-category-chart");
+    if (!ctx) return;
     
-    const transactions = window.userTransactions || [];
-    const expenses = transactions.filter(t => t.type === 'expense');
+    const ctxContext = ctx.getContext("2d");
     
-    // Se não houver despesas, limpa o canvas
-    if (expenses.length === 0) {
-        const ctx = chartCanvas.getContext('2d');
-        ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-        
-        // Limpa a legenda
-        const legendElement = document.getElementById('category-legend');
-        if (legendElement) {
-            legendElement.innerHTML = '<p class="text-center py-3 text-muted">Sem categorias para exibir.</p>';
-        }
-        return;
-    }
-    
-    // Agrupa despesas por categoria
-    const expensesByCategory = {};
-    expenses.forEach(t => {
-        expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + parseFloat(t.amount);
-    });
-    
-    // Prepara dados para o gráfico
-    const categories = Object.keys(expensesByCategory);
-    const values = Object.values(expensesByCategory);
+    // Obtém dados do gráfico
+    const chartData = window.chartData?.expenseCategory || {
+        labels: ["Alimentação", "Moradia", "Transporte", "Outros"],
+        values: [0, 0, 0, 0]
+    };
     
     // Cores para as categorias
-    const colors = [
-        '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
-        '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1'
+    const backgroundColors = [
+        "rgba(59, 130, 246, 0.7)",
+        "rgba(16, 185, 129, 0.7)",
+        "rgba(245, 158, 11, 0.7)",
+        "rgba(239, 68, 68, 0.7)",
+        "rgba(139, 92, 246, 0.7)",
+        "rgba(236, 72, 153, 0.7)",
+        "rgba(75, 85, 99, 0.7)"
     ];
     
-    // Verifica se já existe um gráfico e o destrói
-    if (window.expenseCategoryChart) {
-        window.expenseCategoryChart.destroy();
-    }
-    
-    // Cria o novo gráfico
-    const ctx = chartCanvas.getContext('2d');
-    window.expenseCategoryChart = new Chart(ctx, {
-        type: 'doughnut',
+    // Configuração do gráfico
+    const config = {
+        type: "doughnut",
         data: {
-            labels: categories,
+            labels: chartData.labels,
             datasets: [{
-                data: values,
-                backgroundColor: categories.map((_, i) => colors[i % colors.length]),
-                borderWidth: 2,
-                borderColor: '#FFFFFF'
+                data: chartData.values,
+                backgroundColor: backgroundColors.slice(0, chartData.labels.length),
+                borderWidth: 1
             }]
         },
         options: {
@@ -433,328 +678,253 @@ function renderExpenseCategoryChart() {
             plugins: {
                 legend: {
                     display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = context.raw;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = Math.round((value / total) * 100);
-                            return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
-                        }
-                    }
                 }
-            },
-            cutout: '70%'
+            }
+        }
+    };
+    
+    // Cria o gráfico
+    new Chart(ctxContext, config);
+    
+    // Cria legenda personalizada
+    createCustomLegend(chartData.labels, chartData.values, backgroundColors);
+}
+
+// Cria legenda personalizada para o gráfico de categorias
+function createCustomLegend(labels, values, colors) {
+    const legendContainer = document.getElementById("category-legend");
+    if (!legendContainer) return;
+    
+    // Calcula o total para percentuais
+    const total = values.reduce((sum, value) => sum + value, 0);
+    
+    // Cria HTML para cada item da legenda
+    const legendHTML = labels.map((label, index) => {
+        const value = values[index];
+        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+        const color = colors[index % colors.length];
+        
+        return `
+            <div class="category-item d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="d-inline-block me-2" style="width: 10px; height: 10px; background-color: ${color}; border-radius: 50%;"></span>
+                    ${label}
+                </div>
+                <div>${percentage}%</div>
+            </div>
+        `;
+    }).join("");
+    
+    // Atualiza o DOM
+    legendContainer.innerHTML = legendHTML;
+}
+
+// Configura navegação entre seções
+function setupSectionNavigation() {
+    const navLinks = document.querySelectorAll("[data-section]");
+    
+    navLinks.forEach(link => {
+        link.addEventListener("click", function(e) {
+            e.preventDefault();
+            
+            const section = this.getAttribute("data-section");
+            navigateToSection(section);
+        });
+    });
+}
+
+// Navega para a seção especificada
+function navigateToSection(sectionName) {
+    // Oculta todas as seções
+    const sections = document.querySelectorAll(".app-section");
+    sections.forEach(section => {
+        section.classList.add("d-none");
+    });
+    
+    // Mostra a seção selecionada
+    const targetSection = document.getElementById(`${sectionName}-section`);
+    if (targetSection) {
+        targetSection.classList.remove("d-none");
+    }
+    
+    // Atualiza navegação
+    const navLinks = document.querySelectorAll(".nav-link");
+    navLinks.forEach(link => {
+        link.classList.remove("active");
+        if (link.getAttribute("data-section") === sectionName) {
+            link.classList.add("active");
         }
     });
     
-    // Atualiza a legenda
-    updateCategoryLegend(expensesByCategory, colors);
-}
-
-// Atualiza a legenda de categorias
-function updateCategoryLegend(expensesByCategory, colors) {
-    const legendElement = document.getElementById('category-legend');
-    if (!legendElement) return;
-    
-    // Limpa a legenda atual
-    legendElement.innerHTML = '';
-    
-    // Converte para array e ordena por valor (maior para menor)
-    const categories = Object.entries(expensesByCategory)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-    
-    // Adiciona cada categoria à legenda
-    categories.forEach((category, index) => {
-        const color = colors[index % colors.length];
-        
-        const item = document.createElement('div');
-        item.className = 'category-item d-flex align-items-center mb-2';
-        
-        item.innerHTML = `
-            <div class="category-color me-2" style="width: 12px; height: 12px; border-radius: 50%; background-color: ${color}"></div>
-            <div class="category-name flex-grow-1">${category.name}</div>
-            <div class="category-value fw-bold">${formatCurrency(category.value)}</div>
-        `;
-        
-        legendElement.appendChild(item);
+    // Atualiza navegação mobile se existir
+    const mobileNavItems = document.querySelectorAll(".mobile-nav-item");
+    mobileNavItems.forEach(item => {
+        item.classList.remove("active");
+        if (item.getAttribute("data-section") === sectionName) {
+            item.classList.add("active");
+        }
     });
 }
 
 // Configura o formulário de transação
 function setupTransactionForm() {
-    const form = document.getElementById('transaction-form');
-    if (!form) return;
+    const transactionForm = document.getElementById("transaction-form");
+    if (!transactionForm) return;
     
-    // Define a data padrão como hoje
-    const dateInput = document.getElementById('transaction-date');
+    // Configura alternância entre despesa/receita
+    const toggleBtns = document.querySelectorAll("#transaction-form .toggle-btn");
+    toggleBtns.forEach(btn => {
+        btn.addEventListener("click", function() {
+            // Remove classe active de todos os botões
+            toggleBtns.forEach(b => b.classList.remove("active"));
+            
+            // Adiciona classe active ao botão clicado
+            this.classList.add("active");
+            
+            // Atualiza categorias com base no tipo selecionado
+            const type = this.getAttribute("data-type");
+            updateCategoriesForType(type);
+        });
+    });
+    
+    // Configura data padrão como hoje
+    const dateInput = document.getElementById("transaction-date");
     if (dateInput) {
-        dateInput.valueAsDate = new Date();
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = (today.getMonth() + 1).toString().padStart(2, "0");
+        const day = today.getDate().toString().padStart(2, "0");
+        dateInput.value = `${year}-${month}-${day}`;
     }
     
-    // Preenche as categorias
-    populateCategories();
-    
-    // Configura o envio do formulário
-    form.addEventListener('submit', async function(event) {
+    // Configura envio do formulário
+    transactionForm.addEventListener("submit", async function(event) {
         event.preventDefault();
         
-        // Obtém os valores do formulário
-        const description = document.getElementById('transaction-description').value;
-        const amount = parseFloat(document.getElementById('transaction-amount').value);
-        const category = document.getElementById('transaction-category').value;
-        const date = document.getElementById('transaction-date').value;
-        const type = window.currentTransactionType || 'expense';
+        // Obtém tipo de transação (despesa/receita)
+        const activeToggle = document.querySelector("#transaction-form .toggle-btn.active");
+        const type = activeToggle ? activeToggle.getAttribute("data-type") : "expense";
         
-        // Valida os dados
-        if (!description || isNaN(amount) || amount <= 0 || !category || !date) {
-            showError("Por favor, preencha todos os campos corretamente.");
+        // Obtém valores do formulário
+        const description = document.getElementById("transaction-description").value;
+        const amountInput = document.getElementById("transaction-amount").value;
+        const category = document.getElementById("transaction-category").value;
+        const date = document.getElementById("transaction-date").value;
+        
+        // Converte e valida o valor
+        let amount = 0;
+        try {
+            // Substitui vírgula por ponto e converte para float
+            amount = parseFloat(amountInput.replace(",", "."));
+            
+            // Verifica se é um número válido e positivo
+            if (isNaN(amount) || amount <= 0) {
+                alert("O valor da transação deve ser um número positivo.");
+                return;
+            }
+        } catch (e) {
+            alert("Erro ao processar o valor da transação. Verifique o formato.");
             return;
         }
         
-        // Cria o objeto de transação
+        // Cria objeto de transação com valor absoluto
         const transaction = {
+            type,
             description,
-            amount,
+            amount: Math.abs(amount), // Garante que o valor enviado é sempre positivo
             category,
-            date,
-            type
+            date
         };
-        
-        // Mostra indicador de carregamento
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
-        submitBtn.disabled = true;
-        
-        // Configura um timeout de segurança para restaurar o botão após 10 segundos
-        const safetyTimeout = setTimeout(() => {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            console.log("Timeout de segurança acionado para restaurar o botão");
-        }, 10000);
         
         try {
             console.log("Enviando transação:", transaction);
             
-            // Envia a transação para o servidor
-            const result = await TransactionsAPI.add(transaction);
-            console.log("Transação adicionada com sucesso:", result);
+            // Envia transação para a API
+            await TransactionsAPI.add(transaction);
             
-            // Adiciona a nova transação à lista
-            if (!window.userTransactions) window.userTransactions = [];
-            window.userTransactions.push(result);
+            // Limpa formulário
+            transactionForm.reset();
             
-            // Atualiza a interface
-            renderTransactionsList(window.userTransactions);
-            renderAllTransactionsList(window.userTransactions);
-            updateFinancialSummary();
-            renderCharts();
+            // Redefine tipo para despesa
+            document.querySelector("#transaction-form .toggle-btn.expense").classList.add("active");
+            document.querySelector("#transaction-form .toggle-btn.income").classList.remove("active");
+            updateCategoriesForType("expense");
             
-            // Limpa o formulário
-            form.reset();
-            dateInput.valueAsDate = new Date();
+            // Redefine data para hoje
+            if (dateInput) {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = (today.getMonth() + 1).toString().padStart(2, "0");
+                const day = today.getDate().toString().padStart(2, "0");
+                dateInput.value = `${year}-${month}-${day}`;
+            }
             
-            // Mostra mensagem de sucesso
-            showSuccess("Transação adicionada com sucesso!");
+            // Recarrega dados do dashboard
+            loadDashboardData();
             
-            // Limpa o timeout de segurança
-            clearTimeout(safetyTimeout);
-            
-            // Restaura o botão
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-            
+            // Exibe mensagem de sucesso
+            alert("Transação adicionada com sucesso!");
         } catch (error) {
             console.error("Erro ao adicionar transação:", error);
-            showError("Não foi possível adicionar a transação. Tente novamente.");
-            
-            // Limpa o timeout de segurança
-            clearTimeout(safetyTimeout);
-            
-            // Restaura o botão
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
+            alert("Erro ao adicionar transação: " + (error.message || "Tente novamente."));
         }
     });
+    
+    // Inicializa categorias para despesa (padrão)
+    updateCategoriesForType("expense");
 }
 
-// Preenche as categorias no select
-function populateCategories() {
-    const categorySelect = document.getElementById('transaction-category');
-    if (!categorySelect) return;
+// Função para selecionar o tipo de transação
+function selectTransactionType(type) {
+    const expenseBtn = document.querySelector(".toggle-btn.expense");
+    const incomeBtn = document.querySelector(".toggle-btn.income");
     
-    // Categorias de despesas
-    const expenseCategories = [
-        'Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Educação',
-        'Lazer', 'Vestuário', 'Viagem', 'Serviços', 'Outros'
-    ];
-    
-    // Categorias de receitas
-    const incomeCategories = [
-        'Salário', 'Freelance', 'Investimentos', 'Vendas', 'Presentes',
-        'Reembolso', 'Aluguel', 'Outros'
-    ];
-    
-    // Limpa as opções atuais
-    categorySelect.innerHTML = '<option value="" disabled selected>Selecione uma categoria</option>';
-    
-    // Adiciona as categorias de acordo com o tipo selecionado
-    const categories = window.currentTransactionType === 'income' ? incomeCategories : expenseCategories;
-    
-    categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        categorySelect.appendChild(option);
-    });
-}
-
-// Configura os botões de tipo de transação
-function setupTransactionTypeToggle() {
-    const toggleButtons = document.querySelectorAll('.toggle-btn');
-    if (toggleButtons.length === 0) return;
-    
-    // Define o tipo padrão
-    window.currentTransactionType = 'expense';
-    
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Remove a classe active de todos os botões
-            toggleButtons.forEach(btn => btn.classList.remove('active'));
-            
-            // Adiciona a classe active ao botão clicado
-            this.classList.add('active');
-            
-            // Atualiza o tipo atual
-            window.currentTransactionType = this.dataset.type;
-            
-            // Atualiza as categorias
-            populateCategories();
-        });
-    });
-}
-
-// Configura a navegação entre seções
-function setupNavigation() {
-    const navLinks = document.querySelectorAll('[data-section]');
-    navLinks.forEach(link => {
-        link.addEventListener('click', function(event) {
-            event.preventDefault();
-            
-            // Obtém a seção alvo
-            const targetSection = this.dataset.section;
-            
-            // Esconde todas as seções
-            document.querySelectorAll('.app-section').forEach(section => {
-                section.classList.add('d-none');
-            });
-            
-            // Mostra a seção alvo
-            document.getElementById(`${targetSection}-section`).classList.remove('d-none');
-            
-            // Atualiza os links ativos
-            document.querySelectorAll('.nav-link').forEach(navLink => {
-                navLink.classList.remove('active');
-            });
-            
-            // Marca o link atual como ativo
-            document.querySelectorAll(`.nav-link[data-section="${targetSection}"]`).forEach(navLink => {
-                navLink.classList.add('active');
-            });
-        });
-    });
-    
-    // Configura o botão de logout
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(event) {
-            event.preventDefault();
-            
-            // Remove o token
-            localStorage.removeItem('financas-token');
-            
-            // Redireciona para a página de login
-            window.location.href = 'login.html';
-        });
+    if (expenseBtn && incomeBtn) {
+        if (type === "expense") {
+            incomeBtn.classList.remove("active");
+            expenseBtn.classList.add("active");
+        } else {
+            expenseBtn.classList.remove("active");
+            incomeBtn.classList.add("active");
+        }
+        
+        // Atualiza categorias para o tipo selecionado
+        updateCategoriesForType(type);
     }
 }
 
-// Mostra mensagem de erro
-function showError(message) {
-    // Cria um toast de erro
-    const toast = document.createElement('div');
-    toast.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-    toast.innerHTML = `
-        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-danger text-white">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                <strong class="me-auto">Erro</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
-            </div>
-        </div>
-    `;
+// Atualiza categorias com base no tipo de transação
+function updateCategoriesForType(type) {
+    const categorySelect = document.getElementById("transaction-category");
+    if (!categorySelect) return;
     
-    document.body.appendChild(toast);
+    // Limpa as opções atuais
+    categorySelect.innerHTML = 
+        `<option value="" disabled selected>Selecione uma categoria</option>`;
     
-    // Remove o toast após 5 segundos
-    setTimeout(() => {
-        toast.remove();
-    }, 5000);
+    // Adiciona categorias com base no tipo
+    if (type === "income") {
+        const incomeCategories = [
+            "Salário", "Freelance", "Investimentos", "Vendas", "Outros"
+        ];
+        
+        incomeCategories.forEach(category => {
+            const option = document.createElement("option");
+            option.value = category.toLowerCase();
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    } else {
+        const expenseCategories = [
+            "Alimentação", "Moradia", "Transporte", "Saúde", "Educação", 
+            "Lazer", "Vestuário", "Contas", "Outros"
+        ];
+        
+        expenseCategories.forEach(category => {
+            const option = document.createElement("option");
+            option.value = category.toLowerCase();
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    }
 }
-
-// Mostra mensagem de sucesso
-function showSuccess(message) {
-    // Cria um toast de sucesso
-    const toast = document.createElement('div');
-    toast.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-    toast.innerHTML = `
-        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header bg-success text-white">
-                <i class="fas fa-check-circle me-2"></i>
-                <strong class="me-auto">Sucesso</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                ${message}
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Remove o toast após 5 segundos
-    setTimeout(() => {
-        toast.remove();
-    }, 5000);
-}
-
-// Mostra/esconde indicador de carregamento
-function showLoading(show) {
-    // Implementação simples, pode ser melhorada
-    console.log(show ? "Mostrando indicador de carregamento" : "Escondendo indicador de carregamento");
-}
-
-// Formata valor monetário
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
-
-// Formata data
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('pt-BR').format(date);
-}
-
-// Exporta funções para uso global
-window.loadDashboardData = loadDashboardData;
-window.formatCurrency = formatCurrency;
-window.formatDate = formatDate;

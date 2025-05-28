@@ -42,6 +42,10 @@ document.addEventListener("DOMContentLoaded", function() {
 // Verifica se o token é válido e carrega os dados do usuário
 async function verifyTokenAndLoadData() {
     try {
+        // Adiciona um pequeno atraso para evitar múltiplas verificações simultâneas
+        // que podem ocorrer durante refreshs rápidos
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const result = await AuthAPI.verifyToken();
         if (result && result.valid) {
             console.log("Token válido, usuário autenticado:", result.user.username);
@@ -58,7 +62,11 @@ async function verifyTokenAndLoadData() {
         }
     } catch (error) {
         console.error("Erro ao verificar token:", error);
-        handleLogout();
+        // Não faz logout automático em caso de erro de rede
+        // para evitar deslogar o usuário em caso de problemas temporários
+        if (error.message && (error.message.includes("401") || error.message.includes("403"))) {
+            handleLogout();
+        }
     }
 }
 
@@ -275,3 +283,36 @@ function setupFaqLinks() {
         });
     });
 }
+
+// Adiciona evento para detectar atualizações da página
+window.addEventListener('beforeunload', function() {
+    // Salva um timestamp para controlar a frequência de refreshs
+    const lastRefresh = localStorage.getItem('last-refresh-time');
+    const now = Date.now();
+    
+    if (lastRefresh && (now - parseInt(lastRefresh)) < 2000) {
+        // Se houve refresh há menos de 2 segundos, incrementa contador
+        const refreshCount = parseInt(localStorage.getItem('refresh-count') || '0');
+        localStorage.setItem('refresh-count', (refreshCount + 1).toString());
+    } else {
+        // Caso contrário, reinicia contador
+        localStorage.setItem('refresh-count', '1');
+    }
+    
+    localStorage.setItem('last-refresh-time', now.toString());
+});
+
+// Verifica contador de refreshs ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshCount = parseInt(localStorage.getItem('refresh-count') || '0');
+    console.log(`Contador de refreshs: ${refreshCount}`);
+    
+    // Se houver muitos refreshs em sequência, não verifica o token imediatamente
+    // para evitar sobrecarga de requisições
+    if (refreshCount > 3) {
+        console.log('Muitos refreshs detectados, aguardando antes de verificar token');
+        setTimeout(() => {
+            localStorage.setItem('refresh-count', '0');
+        }, 2000);
+    }
+});
