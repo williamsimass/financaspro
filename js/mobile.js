@@ -71,7 +71,8 @@ function setupFloatingMenu() {
     const floatingMenu = document.querySelector('.floating-menu');
     const floatingMenuToggle = document.getElementById('floating-menu-toggle');
     
-    floatingMenuToggle.addEventListener('click', function() {
+    floatingMenuToggle.addEventListener('click', function(e) {
+        e.stopPropagation(); // Evita propagação para o documento
         floatingMenu.classList.toggle('active');
     });
     
@@ -90,12 +91,15 @@ function setupFloatingMenu() {
     // Botão para adicionar nova despesa
     addExpenseBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        // Navega para a seção de transações
-        navigateToSection('transactions');
-        // Seleciona tipo despesa
-        selectTransactionType('expense');
-        // Foca no formulário de nova transação
-        document.getElementById('transaction-description').focus();
+        e.stopPropagation(); // Evita propagação para o documento
+        // Abre o modal de transação rápida
+        if (typeof openQuickTransactionModal === 'function') {
+            openQuickTransactionModal('expense');
+        } else {
+            // Fallback para navegação tradicional
+            navigateToSection('transactions');
+            selectTransactionType('expense');
+        }
         // Fecha o menu flutuante
         floatingMenu.classList.remove('active');
     });
@@ -103,12 +107,15 @@ function setupFloatingMenu() {
     // Botão para adicionar nova receita
     addIncomeBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        // Navega para a seção de transações
-        navigateToSection('transactions');
-        // Seleciona tipo receita
-        selectTransactionType('income');
-        // Foca no formulário de nova transação
-        document.getElementById('transaction-description').focus();
+        e.stopPropagation(); // Evita propagação para o documento
+        // Abre o modal de transação rápida
+        if (typeof openQuickTransactionModal === 'function') {
+            openQuickTransactionModal('income');
+        } else {
+            // Fallback para navegação tradicional
+            navigateToSection('transactions');
+            selectTransactionType('income');
+        }
         // Fecha o menu flutuante
         floatingMenu.classList.remove('active');
     });
@@ -116,6 +123,7 @@ function setupFloatingMenu() {
     // Botão para mostrar/ocultar resumo mensal
     monthlySummaryBtnMobile.addEventListener('click', function(e) {
         e.preventDefault();
+        e.stopPropagation(); // Evita propagação para o documento
         toggleMonthlySummary();
         // Fecha o menu flutuante
         floatingMenu.classList.remove('active');
@@ -129,6 +137,7 @@ function setupMobileNavigation() {
     mobileNavItems.forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation(); // Evita propagação para o documento
             
             // Remove a classe active de todos os itens
             mobileNavItems.forEach(navItem => {
@@ -155,7 +164,9 @@ function navigateToSection(sectionName) {
     
     // Mostra a seção selecionada
     const targetSection = document.getElementById(`${sectionName}-section`);
-    targetSection.classList.remove('d-none');
+    if (targetSection) {
+        targetSection.classList.remove('d-none');
+    }
     
     // Atualiza a navegação desktop também
     const desktopNavLinks = document.querySelectorAll('.nav-link');
@@ -258,14 +269,16 @@ function setupMonthlySummary() {
                 updateMonthDisplay();
                 
                 // Botão para mês anterior
-                prevMonthBtn.addEventListener('click', function() {
+                prevMonthBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Evita propagação para o documento
                     window.currentMonthDate.setMonth(window.currentMonthDate.getMonth() - 1);
                     updateMonthDisplay();
                     updateMonthlySummaryData(window.currentMonthDate);
                 });
                 
                 // Botão para próximo mês
-                nextMonthBtn.addEventListener('click', function() {
+                nextMonthBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Evita propagação para o documento
                     window.currentMonthDate.setMonth(window.currentMonthDate.getMonth() + 1);
                     updateMonthDisplay();
                     updateMonthlySummaryData(window.currentMonthDate);
@@ -325,16 +338,26 @@ function setupQuickActionButtons() {
             const incomeBtn = document.getElementById('quick-add-income');
             
             if (expenseBtn) {
-                expenseBtn.addEventListener('click', function() {
-                    navigateToSection('transactions');
-                    selectTransactionType('expense');
+                expenseBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Evita propagação para o documento
+                    if (typeof openQuickTransactionModal === 'function') {
+                        openQuickTransactionModal('expense');
+                    } else {
+                        navigateToSection('transactions');
+                        selectTransactionType('expense');
+                    }
                 });
             }
             
             if (incomeBtn) {
-                incomeBtn.addEventListener('click', function() {
-                    navigateToSection('transactions');
-                    selectTransactionType('income');
+                incomeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Evita propagação para o documento
+                    if (typeof openQuickTransactionModal === 'function') {
+                        openQuickTransactionModal('income');
+                    } else {
+                        navigateToSection('transactions');
+                        selectTransactionType('income');
+                    }
                 });
             }
         }
@@ -519,21 +542,70 @@ function formatCurrency(value) {
 
 // Configura navegação por gestos de deslize
 function setupSwipeNavigation() {
+    // Elementos que devem permitir rolagem normal
+    const scrollableElements = [
+        '.container-fluid',
+        '.transactions-container',
+        '.monthly-summary',
+        '.chart-container'
+    ];
+    
     let touchStartX = 0;
+    let touchStartY = 0;
     let touchEndX = 0;
+    let touchEndY = 0;
+    let isScrolling = false;
     
     // Adiciona classe para área de deslize
     document.body.classList.add('swipe-area');
     
-    // Eventos de toque
-    document.body.addEventListener('touchstart', function(e) {
+    // Eventos de toque - apenas para elementos não scrolláveis
+    document.addEventListener('touchstart', function(e) {
+        // Verifica se o toque começou em um elemento scrollável
+        if (isScrollableElement(e.target)) {
+            isScrolling = true;
+            return; // Permite rolagem normal
+        }
+        
         touchStartX = e.changedTouches[0].screenX;
-    }, false);
+        touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true }); // Passive true para melhor performance
     
-    document.body.addEventListener('touchend', function(e) {
+    document.addEventListener('touchend', function(e) {
+        // Se estiver em modo de rolagem, ignora o swipe
+        if (isScrolling) {
+            isScrolling = false;
+            return;
+        }
+        
         touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        
+        // Verifica se é mais um movimento horizontal do que vertical
+        const horizontalDistance = Math.abs(touchEndX - touchStartX);
+        const verticalDistance = Math.abs(touchEndY - touchStartY);
+        
+        // Se o movimento for mais vertical que horizontal, permite rolagem normal
+        if (verticalDistance > horizontalDistance) {
+            return;
+        }
+        
         handleSwipe();
-    }, false);
+    }, { passive: true }); // Passive true para melhor performance
+    
+    // Verifica se o elemento ou seus pais são scrolláveis
+    function isScrollableElement(element) {
+        if (!element) return false;
+        
+        // Verifica se o elemento ou algum de seus pais corresponde aos seletores scrolláveis
+        for (let i = 0; i < scrollableElements.length; i++) {
+            if (element.closest(scrollableElements[i])) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
     
     // Processa o gesto de deslize
     function handleSwipe() {
@@ -549,7 +621,7 @@ function setupSwipeNavigation() {
         
         // Calcula a direção do deslize
         const swipeDistance = touchEndX - touchStartX;
-        const minSwipeDistance = 50; // Distância mínima para considerar um deslize
+        const minSwipeDistance = 100; // Aumenta a distância mínima para considerar um deslize
         
         if (Math.abs(swipeDistance) < minSwipeDistance) {
             return; // Ignora deslizes pequenos
